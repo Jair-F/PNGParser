@@ -1,1 +1,4 @@
 /target
+img/
+.DS_Store
+.cargo
