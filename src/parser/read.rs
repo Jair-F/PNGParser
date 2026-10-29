@@ -1,8 +1,17 @@
+use std::fs;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
-use std::fs;
 
-use crate::parser::interfaces;
+use crate::parser::interfaces::{self};
+
+fn u8_to_u32_msb(data_bytes: &[u8; 4]) -> u32 {
+    let mut ret: u32 = 0;
+    for i in 0..4 {
+        ret = ret << 8;
+        ret |= data_bytes[i] as u32;
+    }
+    ret
+}
 
 pub fn read_file() -> std::io::Result<Vec<u8>> {
     // Reads the raw bytes directly
@@ -19,10 +28,8 @@ fn valid_png_signature(png_bytes: &[u8; 8]) -> bool {
     let png_signature: u64 = 0x89504E470D0A1A0A;
     let mut file_sig: u64 = 0;
 
-    for i in 0..8 {
-        file_sig = file_sig << 8;
-        file_sig += png_bytes[i] as u64;
-    }
+    file_sig = (u8_to_u32_msb(&png_bytes[0..4].try_into().unwrap()) as u64) << 32;
+    file_sig += u8_to_u32_msb(&png_bytes[4..8].try_into().unwrap()) as u64;
 
     file_sig == png_signature
 }
@@ -36,6 +43,14 @@ fn read_file_header(file_path: &str) -> Result<[u8; 8], Box<dyn std::error::Erro
 
     return Ok(file_header);
 }
+
+// fn read_next_chunk(data_bytes: &mut Vec<u8>) -> io::Result<interfaces::Chunk> {
+//     let chunk_size: u32 = data_bytes[0..5].conca
+
+//     let mut ret = interfaces::Chunk::new(chunk_type, data);
+
+//     unimplemented!("Not implemented")
+// }
 
 pub fn read_png(file_path: &str) -> Result<interfaces::Chunk, Box<dyn std::error::Error>> {
     let file_header = read_file_header(&file_path).expect("Failed to read file_header");

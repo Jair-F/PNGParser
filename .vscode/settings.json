@@ -1,0 +1,7 @@
+{
+    "lldb.cargo": "/Users/jair/.cargo/bin/cargo",
+    "lldb.adapterEnv": {
+        "CARGO_HOME": "${workspaceFolder}/.cargo",
+        "PATH": "/Users/jair/.cargo/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+    }
+}
