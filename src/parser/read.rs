@@ -1,6 +1,6 @@
 use std::fs::File;
-use std::io::{self, BufRead, BufReader, Read};
-use std::{fmt::Error, fs, ops::Shl, result};
+use std::io::{BufReader, Read, Seek, SeekFrom};
+use std::fs;
 
 use crate::parser::interfaces;
 
@@ -37,16 +37,17 @@ fn read_file_header(file_path: &str) -> Result<[u8; 8], Box<dyn std::error::Erro
     return Ok(file_header);
 }
 
-pub fn read_png(file_path: &str) -> Result<interfaces::Chunk, &str> {
+pub fn read_png(file_path: &str) -> Result<interfaces::Chunk, Box<dyn std::error::Error>> {
     let file_header = read_file_header(&file_path).expect("Failed to read file_header");
     if !valid_png_signature(&file_header) {
-        return Err("Not a png file");
+        return Err("Not a png file".into());
     }
 
-    let file = File::open(file_path).expect("Failed to open file");
+    let mut file = File::open(file_path)?;
+    file.seek(SeekFrom::Start(8))?;
     let mut reader = BufReader::new(file);
     let mut bytes = Vec::new();
-    reader.read_to_end(&mut bytes);
+    reader.read_to_end(&mut bytes).err();
 
     let mut chunk_type: u32 = 0;
     for i in 0..3 {
