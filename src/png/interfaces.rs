@@ -1,7 +1,7 @@
 use super::helpers;
 
-use std::io;
 use crc32fast::Hasher;
+use std::io;
 
 #[derive(Debug)]
 pub struct Chunk {
@@ -12,27 +12,29 @@ pub struct Chunk {
 
 pub fn calc_crc(chunk_type: u32, chunk_data: &[u8]) -> u32 {
     let mut hasher = Hasher::new();
-    
+
     let chunk_types: [u8; 4] = chunk_type.to_be_bytes();
     // 1. Hash the 4-byte chunk type ASCII identifier
     hasher.update(&chunk_types);
-    
+
     // 2. Hash the variable-length payload data
     hasher.update(chunk_data);
-    
+
     // 3. Finalize and compare
     hasher.finalize()
 }
 
 impl Chunk {
-    pub fn new(chunk_type: u32, data: Vec<u8>, chunk_crc:u32) -> io::Result<Chunk> {
+    pub fn new(chunk_type: u32, data: Vec<u8>, chunk_crc: u32) -> io::Result<Chunk> {
         let calculated_crc = calc_crc(chunk_type, &data);
         if calculated_crc != chunk_crc {
             return Err(io::Error::new(
                 io::ErrorKind::InvalidData,
-                format!("CRC mismatch: expected {:#010X}, found {:#010X}", chunk_crc, calculated_crc),
+                format!(
+                    "CRC mismatch: expected {:#010X}, found {:#010X}",
+                    chunk_crc, calculated_crc
+                ),
             ));
-
         }
         Ok(Chunk {
             chunk_type: chunk_type,
@@ -55,7 +57,7 @@ impl PNG {
 
         // unimplemented!("Not implemented yet");
         let ret = PNG {
-            chunks: helpers::load_file_without_header(file_path)?
+            chunks: helpers::load_file_without_header(file_path)?,
         };
         Ok(ret)
     }

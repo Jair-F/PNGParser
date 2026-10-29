@@ -51,7 +51,11 @@ fn parse_next_chunk(data_bytes: &mut Vec<u8>) -> io::Result<interfaces::Chunk> {
     let chunk_size: u32 = u8_to_u32_msb(&data_bytes[0..4].try_into().unwrap());
     let chunk_type: u32 = u8_to_u32_msb(&data_bytes[4..8].try_into().unwrap());
     let data_end_pos = 8 + chunk_size as usize;
-    let chunk_crc = u8_to_u32_msb(&data_bytes[data_end_pos..data_end_pos + 4].try_into().unwrap());
+    let chunk_crc = u8_to_u32_msb(
+        &data_bytes[data_end_pos..data_end_pos + 4]
+            .try_into()
+            .unwrap(),
+    );
 
     if data_bytes.len() < (data_end_pos + 4) {
         return Err(io::Error::new(
@@ -79,7 +83,7 @@ pub fn load_file_without_header(file_path: &str) -> Result<Vec<Chunk>, Box<dyn s
         let chunk: Chunk = parse_next_chunk(&mut data_bytes)?;
 
         let trash_bytes = chunk.data.len() + 12;
-        let removed_items = data_bytes.drain(0..trash_bytes);
+        let _removed_items = data_bytes.drain(0..trash_bytes);
 
         // println!("removed the following elements: {removed_items:02X?}");
         // println!("{chunk:#?}");
