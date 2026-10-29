@@ -1,7 +1,7 @@
+use super::helpers;
 use std::io;
-use super::shared;
 
-#[derive(Debug)]    
+#[derive(Debug)]
 pub struct Chunk {
     pub chunk_type: u32,
     data: Vec<u8>,
@@ -19,8 +19,6 @@ impl Chunk {
     }
 }
 
-
-
 #[derive(Debug)]
 pub struct PNG {
     // magic_bytes: [u8; 8],
@@ -29,7 +27,7 @@ pub struct PNG {
 
 impl PNG {
     pub fn from_file(file_path: &str) -> io::Result<PNG> {
-        if !shared::is_valid_png_file_header(file_path) {
+        if !helpers::is_valid_png_file_header(file_path) {
             panic!("Not a png file");
         }
 
