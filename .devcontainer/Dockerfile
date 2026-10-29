@@ -4,6 +4,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 USER root
 WORKDIR /workspace
 
+ENV RUSTUP_HOME=/usr/local/rustup
+ENV CARGO_HOME=/usr/local/cargo
+ENV PATH=/usr/local/cargo/bin:$PATH
+
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path \
+    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
+    && rustup component add rust-analyzer rust-src
+RUN cargo install cargo-audit
+
 RUN apt update && apt upgrade -y
 RUN apt update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -12,15 +21,10 @@ RUN apt update && apt-get install -y --no-install-recommends \
     git \
     libssl-dev \
     pkg-config \
-    lldb
+    lldb \
+    # X11 deps
+    libx11-dev \
+    libxcursor-dev \
+    x11-apps \
+    python3
 
-ENV RUSTUP_HOME=/usr/local/rustup
-ENV CARGO_HOME=/usr/local/cargo
-ENV PATH=/usr/local/cargo/bin:$PATH
-
-RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path \
-    && chmod -R a+w $RUSTUP_HOME $CARGO_HOME \
-    && rustup component add rust-analyzer rust-src
-
-RUN cargo install cargo-audit
-RUN apt install -y python3
