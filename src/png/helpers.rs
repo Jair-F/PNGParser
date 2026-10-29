@@ -51,8 +51,9 @@ fn parse_next_chunk(data_bytes: &mut Vec<u8>) -> io::Result<interfaces::Chunk> {
     let chunk_size: u32 = u8_to_u32_msb(&data_bytes[0..4].try_into().unwrap());
     let chunk_type: u32 = u8_to_u32_msb(&data_bytes[4..8].try_into().unwrap());
     let data_end_pos = 8 + chunk_size as usize;
+    let chunk_crc = u8_to_u32_msb(&data_bytes[data_end_pos..data_end_pos + 4].try_into().unwrap());
 
-    if data_bytes.len() < data_end_pos {
+    if data_bytes.len() < (data_end_pos + 4) {
         return Err(io::Error::new(
             io::ErrorKind::UnexpectedEof,
             "chunk data size exceeds available bytes",
@@ -60,7 +61,7 @@ fn parse_next_chunk(data_bytes: &mut Vec<u8>) -> io::Result<interfaces::Chunk> {
     }
 
     let data_bytes = data_bytes[8..data_end_pos].to_vec();
-    Ok(interfaces::Chunk::new(chunk_type, data_bytes))
+    interfaces::Chunk::new(chunk_type, data_bytes, chunk_crc)
 }
 
 pub fn load_file_without_header(file_path: &str) -> Result<Vec<Chunk>, Box<dyn std::error::Error>> {
@@ -73,12 +74,20 @@ pub fn load_file_without_header(file_path: &str) -> Result<Vec<Chunk>, Box<dyn s
     let mut ret_chunks: Vec<Chunk> = Vec::new();
 
     while data_bytes.len() > 0 {
+        // let subset = &data_bytes[0..30].to_vec();
+        // println!("{subset:02X?}");
         let chunk: Chunk = parse_next_chunk(&mut data_bytes)?;
-        let _ = data_bytes.drain(0..chunk.data.len());
 
-        println!("{chunk:#?}");
+        let trash_bytes = chunk.data.len() + 12;
+        let removed_items = data_bytes.drain(0..trash_bytes);
+
+        // println!("removed the following elements: {removed_items:02X?}");
+        // println!("{chunk:#?}");
         ret_chunks.push(chunk);
     }
+
+    let num_of_chunks = ret_chunks.len();
+    println!("read {num_of_chunks} chunks");
 
     // let c = interfaces::Chunk::new(chunk_type, data.clone());
 
