@@ -1,6 +1,9 @@
+use crate::png::Chunk;
+
 use super::constants;
 use super::interfaces;
 use std::fs::File;
+use std::io;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 
 fn u8_to_u32_msb(data_bytes: &[u8; 4]) -> u32 {
@@ -16,10 +19,10 @@ fn valid_png_signature(png_bytes: &[u8; 8]) -> bool {
     if png_bytes.len() != 8 {
         return false;
     }
-    let mut file_sig: u64 = (u8_to_u32_msb(&png_bytes[0..4].try_into().unwrap()) as u64) << 32;
-    file_sig += u8_to_u32_msb(&png_bytes[4..8].try_into().unwrap()) as u64;
+    let mut signature: u64 = (u8_to_u32_msb(&png_bytes[0..4].try_into().unwrap()) as u64) << 32;
+    signature += u8_to_u32_msb(&png_bytes[4..8].try_into().unwrap()) as u64;
 
-    file_sig == constants::PNG_FILE_MAGIC_HEADER
+    signature == constants::PNG_FILE_MAGIC_HEADER
 }
 
 fn read_file_header(file_path: &str) -> Result<[u8; 8], Box<dyn std::error::Error>> {
@@ -37,32 +40,47 @@ pub fn is_valid_png_file_header(file_path: &str) -> bool {
     valid_png_signature(&file_header)
 }
 
-// fn read_next_chunk(data_bytes: &mut Vec<u8>) -> io::Result<interfaces::Chunk> {
-//     let chunk_size: u32 = data_bytes[0..5].conca
+fn parse_next_chunk(data_bytes: &mut Vec<u8>) -> io::Result<interfaces::Chunk> {
+    if data_bytes.len() < 8 {
+        return Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "len of data bytes to short",
+        ));
+    }
 
-//     let mut ret = interfaces::Chunk::new(chunk_type, data);
+    let chunk_size: u32 = u8_to_u32_msb(&data_bytes[0..4].try_into().unwrap());
+    let chunk_type: u32 = u8_to_u32_msb(&data_bytes[4..8].try_into().unwrap());
+    let data_end_pos = 8 + chunk_size as usize;
 
-//     unimplemented!("Not implemented")
-// }
+    if data_bytes.len() < data_end_pos {
+        return Err(io::Error::new(
+            io::ErrorKind::UnexpectedEof,
+            "chunk data size exceeds available bytes",
+        ));
+    }
 
-pub fn read_png(file_path: &str) -> Result<interfaces::Chunk, Box<dyn std::error::Error>> {
+    let data_bytes = data_bytes[8..data_end_pos].to_vec();
+    Ok(interfaces::Chunk::new(chunk_type, data_bytes))
+}
+
+pub fn load_file_without_header(file_path: &str) -> Result<Vec<Chunk>, Box<dyn std::error::Error>> {
     let mut file = File::open(file_path)?;
     file.seek(SeekFrom::Start(8))?;
     let mut reader = BufReader::new(file);
-    let mut bytes = Vec::new();
-    reader.read_to_end(&mut bytes).err();
+    let mut data_bytes = Vec::new();
+    reader.read_to_end(&mut data_bytes).err();
 
-    let mut chunk_type: u32 = 0;
-    for i in 0..3 {
-        chunk_type = chunk_type << 8;
-        chunk_type += bytes[i] as u32;
+    let mut ret_chunks: Vec<Chunk> = Vec::new();
+
+    while data_bytes.len() > 0 {
+        let chunk: Chunk = parse_next_chunk(&mut data_bytes)?;
+        let _ = data_bytes.drain(0..chunk.data.len());
+
+        println!("{chunk:#?}");
+        ret_chunks.push(chunk);
     }
 
-    println!("chunk type: 0x{chunk_type:02x?}");
+    // let c = interfaces::Chunk::new(chunk_type, data.clone());
 
-    let data = &bytes[3..10].to_vec();
-
-    let c = interfaces::Chunk::new(chunk_type, data.clone());
-
-    Ok(c)
+    Ok(ret_chunks)
 }

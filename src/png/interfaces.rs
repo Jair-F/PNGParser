@@ -4,8 +4,8 @@ use std::io;
 #[derive(Debug)]
 pub struct Chunk {
     pub chunk_type: u32,
-    data: Vec<u8>,
-    crc: u32,
+    pub data: Vec<u8>,
+    pub crc: u32,
 }
 
 impl Chunk {
