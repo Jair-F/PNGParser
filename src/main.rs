@@ -1,28 +1,29 @@
 use minifb::{Key, Window, WindowOptions};
 
-fn main() {
-    let width = 640;
-    let height = 480;
+mod read_file;
+
+fn show_window() {
+    let width = 800;
+    let height = 800;
 
     // Create a pixel buffer filled with dark grey (0x00222222)
     let buffer: Vec<u32> = vec![0x00222222; width * height];
+    // let buffer:Vec<u8> = read_file::read_file().unwrap();
 
-    // Create the window
     let mut window = Window::new(
-        "Simple Minifb Window",
+        "PNG Parser",
         width,
         height,
         WindowOptions::default(),
-    )
-    .unwrap_or_else(|e| {
-        panic!("Failed to create window: {}", e);
-    });
+    ).unwrap();
+    window.set_target_fps(30);
 
-    // Main window loop - runs until you close it or press Escape
+
     while window.is_open() && !window.is_key_down(Key::Escape) {
-        // Redraw the screen buffer and handle window events
-        window
-            .update_with_buffer(&buffer, width, height)
-            .unwrap();
+        window.update_with_buffer(&buffer, width, height).unwrap();
     }
+}
+
+fn main() {
+    show_window();
 }
