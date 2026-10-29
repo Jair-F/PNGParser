@@ -1,8 +1,7 @@
 use super::constants;
-use std::fs::File;
 use super::interfaces;
+use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
-
 
 fn u8_to_u32_msb(data_bytes: &[u8; 4]) -> u32 {
     let mut ret: u32 = 0;
@@ -37,8 +36,6 @@ pub fn is_valid_png_file_header(file_path: &str) -> bool {
     let file_header = read_file_header(&file_path).expect("Failed to read file_header");
     valid_png_signature(&file_header)
 }
-
-
 
 // fn read_next_chunk(data_bytes: &mut Vec<u8>) -> io::Result<interfaces::Chunk> {
 //     let chunk_size: u32 = data_bytes[0..5].conca
