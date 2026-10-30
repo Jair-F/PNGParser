@@ -78,15 +78,11 @@ pub fn load_file_without_header(file_path: &str) -> Result<Vec<Chunk>, Box<dyn s
     let mut ret_chunks: Vec<Chunk> = Vec::new();
 
     while data_bytes.len() > 0 {
-        // let subset = &data_bytes[0..30].to_vec();
-        // println!("{subset:02X?}");
         let chunk: Chunk = parse_next_chunk(&mut data_bytes)?;
 
         let trash_bytes = chunk.data.len() + 12;
         let _removed_items = data_bytes.drain(0..trash_bytes);
 
-        // println!("removed the following elements: {removed_items:02X?}");
-        // println!("{chunk:#?}");
         ret_chunks.push(chunk);
     }
 

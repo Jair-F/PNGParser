@@ -8,52 +8,9 @@ use std::io::{Read, Result};
 
 #[derive(Debug)]
 pub struct Chunk {
-    pub chunk_type: u32,
     pub chunk_type_str: String,
     pub data: Vec<u8>,
     pub crc: u32,
-}
-
-pub fn calc_crc(chunk_type: u32, chunk_data: &[u8]) -> u32 {
-    let mut hasher = Hasher::new();
-
-    let chunk_types: [u8; 4] = chunk_type.to_be_bytes();
-    // 1. Hash the 4-byte chunk type ASCII identifier
-    hasher.update(&chunk_types);
-
-    // 2. Hash the variable-length payload data
-    hasher.update(chunk_data);
-
-    // 3. Finalize and compare
-    hasher.finalize()
-}
-
-impl Chunk {
-    pub fn new(chunk_type: u32, data: Vec<u8>, chunk_crc: u32) -> io::Result<Chunk> {
-        let calculated_crc = calc_crc(chunk_type, &data);
-        if calculated_crc != chunk_crc {
-            return Err(io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "CRC mismatch: expected {:#010X}, found {:#010X}",
-                    chunk_crc, calculated_crc
-                ),
-            ));
-        }
-
-        let chunk_type_name: String = chunk_type
-            .to_be_bytes()
-            .iter()
-            .map(|&b| b as char)
-            .collect();
-
-        Ok(Chunk {
-            chunk_type: chunk_type,
-            chunk_type_str: chunk_type_name,
-            data: data,
-            crc: calculated_crc,
-        })
-    }
 }
 
 #[derive(Debug)]
@@ -79,6 +36,42 @@ pub struct Png {
     pub idat: Idat,
 }
 
+impl Chunk {
+    pub fn new(chunk_type: u32, data: Vec<u8>, chunk_crc: u32) -> io::Result<Chunk> {
+        let calculated_crc = Chunk::calc_crc(chunk_type, &data);
+        if calculated_crc != chunk_crc {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "CRC mismatch: expected {:#010X}, found {:#010X}",
+                    chunk_crc, calculated_crc
+                ),
+            ));
+        }
+
+        let chunk_type_name: String = chunk_type
+            .to_be_bytes()
+            .iter()
+            .map(|&b| b as char)
+            .collect();
+
+        Ok(Chunk {
+            chunk_type_str: chunk_type_name,
+            data: data,
+            crc: calculated_crc,
+        })
+    }
+
+    pub fn calc_crc(chunk_type: u32, chunk_data: &[u8]) -> u32 {
+        let mut hasher = Hasher::new();
+        let chunk_types: [u8; 4] = chunk_type.to_be_bytes();
+
+        hasher.update(&chunk_types);
+        hasher.update(chunk_data);
+        hasher.finalize()
+    }
+}
+
 impl Png {
     fn parse_ihdr(header_chunk: &Chunk) -> Option<Ihdr> {
         let data = &header_chunk.data;
@@ -94,7 +87,7 @@ impl Png {
         })
     }
 
-    fn uncompress_idat(ihdr: &Ihdr, mut idat: Idat, compressed_bytes:Vec<u8>) -> Option<Idat> {
+    fn uncompress_idat(ihdr: &Ihdr, mut idat: Idat, compressed_bytes: Vec<u8>) -> Option<Idat> {
         if ihdr.compression != 0 {
             panic!("Unsupported compression algorithm");
         }
@@ -121,9 +114,7 @@ impl Png {
         }
         let mut ihdr = None;
         let mut compressed_idat_bytes = Vec::new();
-        let mut idat = Idat {
-            bytes: Vec::new(),
-        };
+        let mut idat = Idat { bytes: Vec::new() };
 
         for chunk in &raw_chunks {
             match chunk.chunk_type_str.as_str() {
