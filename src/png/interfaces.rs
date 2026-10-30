@@ -2,8 +2,8 @@ use super::helpers;
 
 use super::helpers::u8_to_u32_msb;
 use crc32fast::Hasher;
-use std::io;
 use flate2::read::ZlibDecoder;
+use std::io;
 use std::io::{Read, Result};
 
 #[derive(Debug)]
@@ -69,7 +69,6 @@ pub struct Ihdr {
 
 #[derive(Debug)]
 pub struct Idat {
-    pub compressed_bytes: Vec<u8>,
     pub bytes: Vec<u8>,
 }
 
@@ -95,15 +94,17 @@ impl Png {
         })
     }
 
-    fn uncompress_idat(ihdr: &Ihdr, mut idat: Idat) -> Option<Idat> {
+    fn uncompress_idat(ihdr: &Ihdr, mut idat: Idat, compressed_bytes:Vec<u8>) -> Option<Idat> {
         if ihdr.compression != 0 {
             panic!("Unsupported compression algorithm");
         }
-        
-        let mut decoder = ZlibDecoder::new(&idat.compressed_bytes[..]);
+
+        let mut decoder = ZlibDecoder::new(&compressed_bytes[..]);
         let mut decompressed = Vec::new();
-        
-        decoder.read_to_end(&mut decompressed).expect("Failed to decompress IDAT");
+
+        decoder
+            .read_to_end(&mut decompressed)
+            .expect("Failed to decompress IDAT");
         idat.bytes = decompressed;
 
         Some(idat)
@@ -119,15 +120,15 @@ impl Png {
             panic!("PNG file is missing header");
         }
         let mut ihdr = None;
+        let mut compressed_idat_bytes = Vec::new();
         let mut idat = Idat {
-            compressed_bytes: Vec::new(),
             bytes: Vec::new(),
         };
 
         for chunk in &raw_chunks {
             match chunk.chunk_type_str.as_str() {
                 "IDAT" => {
-                    idat.compressed_bytes.append(&mut chunk.data.clone());
+                    compressed_idat_bytes.append(&mut chunk.data.clone());
                 }
                 "IHDR" => {
                     ihdr = Png::parse_ihdr(&chunk);
@@ -138,14 +139,14 @@ impl Png {
                     }
                     break;
                 }
-                _ =>  {
+                _ => {
                     continue;
                 }
             }
         }
 
         let ihdr = ihdr.unwrap();
-        idat = Png::uncompress_idat(&ihdr, idat).unwrap();
+        idat = Png::uncompress_idat(&ihdr, idat, compressed_idat_bytes).unwrap();
 
         Ok(Png {
             chunks: raw_chunks,
