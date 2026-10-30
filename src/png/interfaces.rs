@@ -1,8 +1,8 @@
 use super::helpers;
 
+use super::helpers::u8_to_u32_msb;
 use crc32fast::Hasher;
 use std::io;
-use super::helpers::u8_to_u32_msb;
 
 #[derive(Debug)]
 pub struct Chunk {
@@ -54,50 +54,55 @@ impl Chunk {
     }
 }
 
+#[derive(Debug)]
 pub struct Ihdr {
-    pub width:u32,
-    pub height:u32,
-    pub bit_depth:u8,
-    pub color_type:u8,
-    pub compression:u8,
-    pub filter:u8,
-    pub interlace:u8,
+    pub width: u32,
+    pub height: u32,
+    pub bit_depth: u8,
+    pub color_type: u8,
+    pub compression: u8,
+    pub filter: u8,
+    pub interlace: u8,
 }
 
 #[derive(Debug)]
 pub struct Png {
-    pub chunks: Vec<Chunk>
+    pub chunks: Vec<Chunk>,
+    pub ihdr: Ihdr,
+    // pub idat: bool,
 }
 
 impl Png {
+    fn parse_ihdr(header_chunk: &Chunk) -> Result<Ihdr, Box<dyn std::error::Error>> {
+        let data = &header_chunk.data;
+
+        Ok(Ihdr {
+            width: u8_to_u32_msb(data[0..4].try_into().unwrap()),
+            height: u8_to_u32_msb(data[4..8].try_into().unwrap()),
+            bit_depth: data[8],
+            color_type: data[9],
+            compression: data[10],
+            filter: data[11],
+            interlace: data[12],
+        })
+    }
+
     pub fn from_file(file_path: &str) -> Result<Png, Box<dyn std::error::Error>> {
         if !helpers::is_valid_png_file_header(file_path) {
             panic!("Not a png file");
         }
 
         let raw_chunks = helpers::load_file_without_header(file_path)?;
-        let first_chunk = &raw_chunks[0];
-        if first_chunk.chunk_type_str != "IHDR" {
+        if &raw_chunks[0].chunk_type_str != "IHDR" {
             panic!("PNG file is missing header");
         }
-        
-        Png::parse_ihdr(first_chunk);
 
+        let ihdr = Png::parse_ihdr(&raw_chunks[0])?;
         // unimplemented!("Not implemented yet");
         let ret = Png {
             chunks: raw_chunks,
+            ihdr: ihdr,
         };
         Ok(ret)
-    }
-
-    fn parse_ihdr(header_chunk: &Chunk) {
-        let data = &header_chunk.data;
-        let width = u8_to_u32_msb(data[0..4].try_into().unwrap());
-        let height = u8_to_u32_msb(data[4..8].try_into().unwrap());
-        let bit_depth = data[8];
-        let color_type = data[9];
-        let compression = data[10];
-        let filter = data[11];
-        let interlace = data[12];
     }
 }
