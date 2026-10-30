@@ -13,5 +13,5 @@ fn main() {
     println!();
     println!("PNG image: {image:#?}");
 
-    // ui::draw::show_window();
+    ui::draw::show_window(image);
 }
