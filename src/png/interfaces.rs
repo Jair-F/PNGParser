@@ -137,6 +137,31 @@ impl Png {
         })
     }
 
+    pub fn reconstruct_pixels(self) -> Vec<u32> {
+        let bpp = self.ihdr.bytes_per_pixel();
+        let stride = self.ihdr.width as usize * bpp;
+        let _scanline_width = 1 + stride; // how many bytes are in one row 1x filterbyte + x color bytes
+
+        let mut reconstructed_bytes: Vec<u8> = Vec::new();
+
+        let mut data_bytes = self.idat.bytes;
+        for _line in 0..data_bytes.len() / stride {
+            let filter = data_bytes[0];
+            for data_byte in data_bytes.drain(..stride) {
+                match filter {
+                    0 => {
+                        reconstructed_bytes.push(data_byte);
+                    }
+                    _ => continue,
+                }
+            }
+        }
+
+        let buffer_u32 = Vec::new();
+
+        buffer_u32
+    }
+
     pub fn from_file(file_path: &str) -> Result<Png> {
         if !helpers::is_valid_png_file_header(file_path) {
             panic!("Not a png file");

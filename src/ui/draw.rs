@@ -5,6 +5,7 @@ use crate::png::Png;
 pub fn show_window(image: Png) {
     let width = image.ihdr.width as usize;
     let height = image.ihdr.height as usize;
+    let _pixels = image.reconstruct_pixels();
 
     // Create a pixel buffer filled with dark grey (0x00222222)
     let buffer: Vec<u32> = vec![0x00222222; width * height];
