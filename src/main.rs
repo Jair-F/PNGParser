@@ -11,7 +11,7 @@ fn main() {
         print!("{out}, ");
     }
     println!();
-    println!("PNG image: {image:#?}");
+    // println!("PNG image: {image:#?}");
 
     ui::draw::show_window(image);
 }
