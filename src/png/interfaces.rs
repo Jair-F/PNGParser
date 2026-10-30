@@ -3,6 +3,7 @@ use super::helpers;
 use super::helpers::u8_to_u32_msb;
 use crc32fast::Hasher;
 use std::io;
+use std::time::UNIX_EPOCH;
 
 #[derive(Debug)]
 pub struct Chunk {
@@ -66,17 +67,23 @@ pub struct Ihdr {
 }
 
 #[derive(Debug)]
+pub struct Idat {
+    pub compressed_bytes: Vec<u8>,
+    pub bytes: Vec<u8>,
+}
+
+#[derive(Debug)]
 pub struct Png {
     pub chunks: Vec<Chunk>,
     pub ihdr: Ihdr,
-    // pub idat: bool,
+    pub idat: Idat,
 }
 
 impl Png {
-    fn parse_ihdr(header_chunk: &Chunk) -> Result<Ihdr, Box<dyn std::error::Error>> {
+    fn parse_ihdr(header_chunk: &Chunk) -> Option<Ihdr> {
         let data = &header_chunk.data;
 
-        Ok(Ihdr {
+        Some(Ihdr {
             width: u8_to_u32_msb(data[0..4].try_into().unwrap()),
             height: u8_to_u32_msb(data[4..8].try_into().unwrap()),
             bit_depth: data[8],
@@ -85,6 +92,16 @@ impl Png {
             filter: data[11],
             interlace: data[12],
         })
+    }
+
+    fn parse_idat_chunk_bytes(data_chunk: &Chunk) -> Option<Vec<u8>> {
+
+        Some(data_chunk.data.clone())
+    }
+
+    fn uncompress_idat(idat: Idat) -> Option<Idat> {
+
+        Some(idat)
     }
 
     pub fn from_file(file_path: &str) -> Result<Png, Box<dyn std::error::Error>> {
@@ -96,13 +113,39 @@ impl Png {
         if &raw_chunks[0].chunk_type_str != "IHDR" {
             panic!("PNG file is missing header");
         }
-
-        let ihdr = Png::parse_ihdr(&raw_chunks[0])?;
-        // unimplemented!("Not implemented yet");
-        let ret = Png {
-            chunks: raw_chunks,
-            ihdr: ihdr,
+        let mut ihdr = None;
+        let mut idat = Idat {
+            compressed_bytes: Vec::new(),
+            bytes: Vec::new(),
         };
-        Ok(ret)
+
+        for chunk in &raw_chunks {
+            match chunk.chunk_type_str.as_str() {
+                "IDAT" => {
+                    let mut idat_bytes = Png::parse_idat_chunk_bytes(&chunk).unwrap();
+                    idat.compressed_bytes.append(&mut idat_bytes);
+                }
+                "IHDR" => {
+                    ihdr = Png::parse_ihdr(&chunk);
+                }
+                "IEND" => {
+                    if chunk.crc != 0xAE426082 {
+                        panic!("Invalid IEND crc")
+                    }
+                    break;
+                }
+                _ =>  {
+                    continue;
+                }
+            }
+        }
+
+        idat = Png::uncompress_idat(idat).unwrap();
+
+        Ok(Png {
+            chunks: raw_chunks,
+            ihdr: ihdr.unwrap(),
+            idat: idat,
+        })
     }
 }
