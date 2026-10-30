@@ -6,7 +6,7 @@ use std::fs::File;
 use std::io;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 
-fn u8_to_u32_msb(data_bytes: &[u8; 4]) -> u32 {
+pub fn u8_to_u32_msb(data_bytes: &[u8; 4]) -> u32 {
     let mut ret: u32 = 0;
     for i in 0..4 {
         ret = ret << 8;
